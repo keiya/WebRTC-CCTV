@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<!-- saved from url=(0067)http://editors.ascii.jp/m-kobashigawa/web-tips/labo/webrt/sample06/ -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta charset="utf-8">
+		<title>Realtime Video on WebRTC</title>
+<style type='text/css'>
+		#dbg {
+			position: fixed;
+			top: 0;
+			right:0;
+			font-size: 0.5em;
+			z-index: 0;
+			font-family: "Courier New",monospace;
+			line-height: 0.5em;
+			width:200px;
+		}
+		</style>
+
+	</head>
+	<body>
+		<h1>WebRTC + WebSocket (node.js-based)</h1>
+		<h2>My Cam (Local)</h2>
+		<video id='mycam' width="320" height="240" autoplay=""></video>
+		<canvas id='mycam-cv' width="320" height="240" style="display:none;"></canvas>
+		<h2>Friends Cam (via WebSocket)</h2>
+		<div id='videos'></div>
+		<hr>
+		<pre id='dbg'></pre>
+		<script src='jquery-1.8.3.min.js'></script>
+<script>
+$(document).ready(function(){
+	var myVideo = $("#mycam")[0];
+	var myCanvas = $("#mycam-cv")[0];
+	var $videos = $("#videos");
+	var context = myCanvas.getContext("2d");
+	var ctx = [];
+
+	var ws;
+	var frametimer;
+
+	function append_canvas(request) {
+		if (ctx[request]) return;
+		dbg('expanding canvas slot #'+request);
+		$videos.append('<canvas width="320" height="240" data-id="'+request+'"></canvas>');
+		var $canvas = $videos.find('canvas[data-id="'+request+'"]');
+		ctx[request] = $canvas[0].getContext("2d");
+	}
+	device_init();
+
+	function dbg(text) {
+		var buffer = $('#dbg').text().split('\n');
+		buffer.push(text);
+		var buffers = buffer.slice(-100);
+		var str = '';
+		for (var b in buffers) {
+			str += buffers[b]+'\n';
+		}
+		$('#dbg').text(str);
+	}
+
+	function process_message(m) {
+		var data = m.data.split(' ',3);
+		switch (data[0]) {
+			case 'DAT':
+				video_frame(data[1],data[2]);
+				break;
+			case 'CTL':
+				remove_client(data[1],data[2]);
+				break;
+		}
+	}
+
+	function onclose() {
+		dbg('connection closed');
+		clearInterval(frametimer);
+	}
+	function onerror() {
+		dbg('connection error');
+		clearInterval(frametimer);
+	}
+
+	function remove_client(evt,id) {
+		switch (evt) {
+			case 'close':
+				dbg('closing canvas slot #'+id);
+				var $canvas = $videos.find('canvas[data-id="'+id+'"]').remove();
+				delete ctx[id];
+				break;
+		}
+	}
+
+	function write_connect() {
+		dbg('connecting on full-duplex connection...');
+		ws = new WebSocket('ws://web.keiyac.org:8080/');
+		ws.onopen = function () {
+			dbg('onopen');
+			frametimer = setInterval(function(){
+				context.drawImage(myVideo, 0, 0, 320, 240);
+				var base64 = myCanvas.toDataURL('image/jpeg',0.5);
+				try {
+					ws.send(base64);
+				}
+				catch(e){};
+			}, 100);
+		};
+		ws.onclose = onclose;
+		ws.onerror = onerror;
+		ws.onmessage = process_message;
+	}
+	function readonly_connect() {
+		dbg('connecting on readonly mode...');
+		ws = new WebSocket('ws://web.keiyac.org:8080/');
+		ws.onclose = onclose;
+		ws.onerror = onerror;
+		ws.onmessage = process_message;
+	}
+function video_frame(id,imgdata) {
+	append_canvas(id);
+	var img = new Image();
+	img.onload = function(){
+		//context.drawImage(this, 0, 0, canvas.width, canvas.height);
+		ctx[id].drawImage(this,0,0,320,240);
+	}
+	img.src = imgdata;
+}
+
+	function device_init() {
+	// getUserMediaにwebkitGetUserMediaを設定
+	navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia;
+	if (!navigator.getUserMedia) {
+		readonly_connect();
+		return false;
+	}
+	navigator.getUserMedia({video:true,audio:true},
+		function(stream){	// カメラからの取り込みがOKな場合
+			// 映像を表示するvideo要素にURLとして代入
+			if (window.webkitURL && webkitURL.createObjectURL){
+				myVideo.src = webkitURL.createObjectURL(stream);
+			}else{
+				myVideo.src = stream;
+			}
+			write_connect();
+		}, 
+		function(error){	// エラーの場合
+			console.log("エラー："+error.code);
+			readonly_connect();
+		}
+	);
+}
+});
+</script>
+
+</body></html>
