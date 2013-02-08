@@ -24,4 +24,4 @@ Installation
 
 --------
 WebRTCで実装された監視カメラシステム
-by Keiya Chinen <keiya_21@yahoo.co.jp>
+by Keiya Chinen keiya_21@yahoo.co.jp
