@@ -1,5 +1,5 @@
 var WebSocketServer = require('ws').Server
-  , wss = new WebSocketServer({port: 8080});
+  , wss = new WebSocketServer({server:'ws://localhost/ws/', port: 8080});
 var slot = [];
 var maxid = 0;
 wss.on('connection', function(ws) {

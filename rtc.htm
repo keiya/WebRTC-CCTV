@@ -2,6 +2,8 @@
 <!-- saved from url=(0067)http://editors.ascii.jp/m-kobashigawa/web-tips/labo/webrt/sample06/ -->
 <html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<meta charset="utf-8">
+  <meta http-equiv="refresh" content="3600">
+
 		<title>Realtime Video on WebRTC</title>
 <style type='text/css'>
 		#dbg {
@@ -27,6 +29,7 @@
 		<hr>
 		<pre id='dbg'></pre>
 		<script src='jquery-1.8.3.min.js'></script>
+<script src="./reconnecting-websocket.min.js"></script>
 <script>
 $(document).ready(function(){
 	var myVideo = $("#mycam")[0];
@@ -91,12 +94,12 @@ $(document).ready(function(){
 
 	function write_connect() {
 		dbg('connecting on full-duplex connection...');
-		ws = new WebSocket('ws://localhost:8080/');
+		ws = new ReconnectingWebSocket('wss://cctv.twogate.net/ws/');
 		ws.onopen = function () {
 			dbg('onopen');
 			frametimer = setInterval(function(){
 				context.drawImage(myVideo, 0, 0, 320, 240);
-				var base64 = myCanvas.toDataURL('image/jpeg',0.5);
+				var base64 = myCanvas.toDataURL('image/jpeg',0.1);
 				try {
 					ws.send(base64);
 				}
@@ -109,7 +112,19 @@ $(document).ready(function(){
 	}
 	function readonly_connect() {
 		dbg('connecting on readonly mode...');
-		ws = new WebSocket('ws://localhost:8080/');
+		ws = new ReconnectingWebSocket('wss://cctv.twogate.net/ws/');
+		ws.onopen = function () {
+			dbg('onopen');
+			frametimer = setInterval(function(){
+				context.drawImage(myVideo, 0, 0, 320, 240);
+				var base64 = myCanvas.toDataURL('image/jpeg',0.1);
+				try {
+					ws.send(base64);
+				}
+				catch(e){};
+			}, 100);
+		};
+
 		ws.onclose = onclose;
 		ws.onerror = onerror;
 		ws.onmessage = process_message;
