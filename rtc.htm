@@ -91,7 +91,7 @@ $(document).ready(function(){
 
 	function write_connect() {
 		dbg('connecting on full-duplex connection...');
-		ws = new WebSocket('ws://web.keiyac.org:8080/');
+		ws = new WebSocket('ws://localhost:8080/');
 		ws.onopen = function () {
 			dbg('onopen');
 			frametimer = setInterval(function(){
@@ -109,7 +109,7 @@ $(document).ready(function(){
 	}
 	function readonly_connect() {
 		dbg('connecting on readonly mode...');
-		ws = new WebSocket('ws://web.keiyac.org:8080/');
+		ws = new WebSocket('ws://localhost:8080/');
 		ws.onclose = onclose;
 		ws.onerror = onerror;
 		ws.onmessage = process_message;
@@ -134,8 +134,8 @@ function video_frame(id,imgdata) {
 	navigator.getUserMedia({video:true,audio:true},
 		function(stream){	// カメラからの取り込みがOKな場合
 			// 映像を表示するvideo要素にURLとして代入
-			if (window.webkitURL && webkitURL.createObjectURL){
-				myVideo.src = webkitURL.createObjectURL(stream);
+			if (window.URL && URL.createObjectURL){
+				myVideo.src = URL.createObjectURL(stream);
 			}else{
 				myVideo.src = stream;
 			}
